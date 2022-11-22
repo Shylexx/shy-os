@@ -4,23 +4,49 @@
 #![test_runner(crate::test_runner)]
 #![reexport_test_harness_main = "test_main"]
 
+mod serial;
 mod vga_buffer;
 
 use core::panic::PanicInfo;
+
 // Called on panic
+#[cfg(not(test))]
 #[panic_handler]
 fn panic(info: &PanicInfo) -> ! {
     println!("{}", info);
     loop {}
 }
 
-#[cfg(test)]
-fn test_runner(tests: &[&dyn Fn()]) {
-    use std::process::exit;
+pub trait Testable {
+    fn run(&self) -> ();
+}
 
-    println!("Running {} tests", tests.len());
+impl<T> Testable for T
+where
+    T: Fn(),
+{
+    fn run(&self) -> () {
+        serial_println!("{}..\t", core::any::type_name::<T>());
+        self();
+        serial_println!("[ok]");
+    }
+}
+
+// Test mode panic handler
+#[cfg(test)]
+#[panic_handler]
+fn panic(info: &PanicInfo) -> ! {
+    serial_println!("[failed]\n");
+    serial_println!("Error: {}\n", info);
+    exit_qemu(QemuExitCode::Failed);
+    loop {}
+}
+
+#[cfg(test)]
+fn test_runner(tests: &[&dyn Testable]) {
+    serial_println!("Running {} tests", tests.len());
     for test in tests {
-        test();
+        test.run();
     }
 
     exit_qemu(QemuExitCode::Success);
@@ -39,9 +65,7 @@ pub extern "C" fn _start() -> ! {
 
 #[test_case]
 fn trivial_assertion() {
-    print!("Trivial Assertation... ");
     assert_eq!(1, 1);
-    println!("[ok]");
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
