@@ -148,7 +148,7 @@ fn test_println_simple() {
 
 #[test_case]
 fn test_println_many() {
-    for _ in 0.200 {
+    for _ in 0..200 {
         println!("test_println_many output");
     }
 }
@@ -156,8 +156,8 @@ fn test_println_many() {
 #[test_case]
 fn test_println_output() {
     let s = "Some test string on a single line";
-    println("{}", s);
-    for (i, c) in s.chars().enmerate() {
+    println!("{}", s);
+    for (i, c) in s.chars().enumerate() {
         let screen_char = WRITER.lock().buffer.chars[BUFFER_HEIGHT - 2][i].read();
         assert_eq!(char::from(screen_char.ascii_character), c);
     }
